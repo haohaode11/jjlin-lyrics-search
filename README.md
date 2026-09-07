@@ -28,25 +28,25 @@
 
 ## 🚀 快速开始
 
+> 仓库**不含歌词全文**（版权合规）。首次运行需先执行一步数据生成（联网从数据源下载，之后可离线运行）。
+
 ```bash
 # 1. 安装依赖
 npm install
 
-# 2. 生成本地歌词索引
-npm run build:index     # 读取 data/lyrics.json -> public/lyrics-index.json
+# 2. 一步生成歌词数据 + 索引（下载 391 条记录 -> 清洗 293 首 -> 构建索引）
+npm run setup:data
 
 # 3. 启动开发服务器
 npm run dev             # 打开 http://localhost:5173
 ```
 
-### 从零重建歌词数据（可选）
-
-> **版权说明**：仓库**不包含任何歌词全文**（见「版权与合规」）。首次克隆需在本地执行下面两步生成数据：
+`setup:data` 等价于以下三步（可单独执行）：
 
 ```bash
 npm run fetch:cleaned   # ① 下载 391 条林俊杰原始记录（专辑/发行日/歌词/署名）
 npm run import:all      # ② 清洗去重、解析词曲编曲署名 -> data/lyrics.json
-npm run build:index     # ③ 生成前端索引
+npm run build:index     # ③ 生成前端索引 public/lyrics-index.json
 ```
 
 默认附带 `data/schema.example.json` 展示数据结构；`data/lyrics.json` 与 `data/raw/` 已被 `.gitignore` 排除，不会进入版本库。

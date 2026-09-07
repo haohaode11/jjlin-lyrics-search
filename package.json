@@ -11,6 +11,7 @@
     "fetch:jjqa": "node scripts/download-jjqa.mjs && node scripts/import-jjqa.mjs",
     "fetch:cleaned": "node scripts/fetch-cleaned.mjs",
     "import:all": "node scripts/import-all.mjs",
+    "setup:data": "node scripts/fetch-cleaned.mjs && node scripts/import-all.mjs && npm run build:index",
     "build": "npm run build:index && vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run"

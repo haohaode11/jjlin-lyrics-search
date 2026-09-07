@@ -21,7 +21,10 @@ onMounted(async () => {
     stats.value = getStats()
     ready.value = true
   } catch (e) {
-    errorMsg.value = e instanceof Error ? e.message : String(e)
+    const msg = e instanceof Error ? e.message : String(e)
+    errorMsg.value = msg.includes('HTTP 404')
+      ? '未找到歌词索引文件。请先运行 npm run setup:data 生成歌词数据与索引，再刷新本页。'
+      : `${msg}（数据缺失？请运行 npm run setup:data）`
   }
 })
 
