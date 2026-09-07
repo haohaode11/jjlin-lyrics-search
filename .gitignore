@@ -1,0 +1,9 @@
+node_modules
+dist
+# 版权合规：歌词全文不入库，仅保留本地与管道脚本
+data/raw
+data/lyrics.json
+public/lyrics-index.json
+.npm-cache
+*.local
+.DS_Store

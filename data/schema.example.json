@@ -1,0 +1,17 @@
+{
+  "_comment": "data/lyrics.json 的结构示例（不含真实歌词）。字段含义见 README「数据结构」。真实数据请运行 npm run fetch:cleaned && npm run import:all 在本地生成。",
+  "songs": [
+    {
+      "id": "example-001",
+      "title": "示例歌曲",
+      "artist": "林俊杰",
+      "album": "示例专辑",
+      "year": 2024,
+      "lyricist": "作词人甲",
+      "composer": "作曲人乙",
+      "arranger": "编曲人丙",
+      "singerNote": "",
+      "lyric": "这是第一行示例歌词\n这是第二行示例歌词"
+    }
+  ]
+}

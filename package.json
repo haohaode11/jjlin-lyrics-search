@@ -1,0 +1,31 @@
+{
+  "name": "jj-lyric-finder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "林俊杰歌词快速检索 Demo — 输入单字/拼音实时联想，模糊容错，纯前端毫秒级检索",
+  "scripts": {
+    "dev": "vite",
+    "build:index": "node scripts/build-index.mjs",
+    "fetch:lyrics": "node scripts/fetch-lyrics.mjs",
+    "fetch:jjqa": "node scripts/download-jjqa.mjs && node scripts/import-jjqa.mjs",
+    "fetch:cleaned": "node scripts/fetch-cleaned.mjs",
+    "import:all": "node scripts/import-all.mjs",
+    "build": "npm run build:index && vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "fuse.js": "^7.5.0",
+    "vue": "^3.5.42"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "pinyin-pro": "^3.29.3",
+    "typescript": "~5.8.3",
+    "vite": "^8.2.2",
+    "vitest": "^3.2.7",
+    "vue-tsc": "^3.3.11"
+  }
+}
