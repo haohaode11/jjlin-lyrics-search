@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import SearchBox from './components/SearchBox.vue'
 import SongDetail from './components/SongDetail.vue'
 import { allSongs, getStats, loadIndex } from './search/engine'
+import { albumLabel } from './search/format'
 import type { SongMeta, SuggestionPick } from './search/types'
 
 const ready = ref(false)
@@ -86,7 +87,10 @@ function openSong(i: number) {
             :class="{ 'songlist__li--on': view && view.song.id === s.id }"
             @click="openSong(i)"
           >
-            <span class="songlist__name">{{ s.title }}</span>
+            <span class="songlist__main">
+              <span class="songlist__name">{{ s.title }}</span>
+              <span class="songlist__album">《{{ albumLabel(s) }}》</span>
+            </span>
             <span class="songlist__year">{{ s.year ?? '' }}</span>
           </li>
         </ul>
@@ -252,6 +256,22 @@ function openSong(i: number) {
   cursor: pointer;
   font-size: 14px;
   color: var(--text-1);
+}
+
+.songlist__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.songlist__album {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-2);
 }
 
 .songlist__li:hover {

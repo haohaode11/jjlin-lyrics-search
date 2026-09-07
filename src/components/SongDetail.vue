@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { linesOfSong } from '../search/engine'
+import { albumLabel } from '../search/format'
 import type { SongMeta } from '../search/types'
 
 const props = defineProps<{
@@ -21,8 +22,7 @@ const lineIdx = computed(() => linesOfSong(props.songIdx))
         <h2 class="detail__title">{{ song.title }}</h2>
         <p class="detail__meta">
           {{ song.artist }}<template v-if="song.singerNote"> · feat. {{ song.singerNote }}</template
-          ><template v-if="song.album"> · 《{{ song.album }}》</template
-          ><template v-if="song.year"> · {{ song.year }}</template>
+          > · 《{{ albumLabel(song) }}》<template v-if="song.year"> · {{ song.year }}</template>
         </p>
         <p v-if="song.lyricist || song.composer || song.arranger" class="detail__credits">
           <template v-if="song.lyricist"><b>词</b> {{ song.lyricist }}</template>

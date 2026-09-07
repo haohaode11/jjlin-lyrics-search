@@ -3,6 +3,7 @@ import { onBeforeUnmount, ref } from 'vue'
 import { search, searchSongs } from '../search/engine'
 import type { SearchHit, SongHit, SuggestionPick } from '../search/types'
 import { segmentHighlight, type CharSeg } from '../search/highlight'
+import { albumLabel } from '../search/format'
 
 const emit = defineEmits<{ pick: [payload: SuggestionPick] }>()
 
@@ -141,7 +142,7 @@ onBeforeUnmount(() => window.clearTimeout(timer))
             </span>
             <span class="sb__meta">
               <template v-if="row.hit.song.singerNote">feat. {{ row.hit.song.singerNote }} · </template
-              >{{ row.hit.song.album || '' }}<template v-if="row.hit.song.year"> · {{ row.hit.song.year }}</template>
+              >《{{ albumLabel(row.hit.song) }}》<template v-if="row.hit.song.year"> · {{ row.hit.song.year }}</template>
             </span>
           </template>
 
@@ -153,10 +154,15 @@ onBeforeUnmount(() => window.clearTimeout(timer))
                 ><template v-else>{{ s.ch }}</template>
               </template>
             </span>
-            <span class="sb__meta">
-              {{ row.hit.song.title
-              }}<template v-if="row.hit.song.year"> · {{ row.hit.song.year }}</template>
-              <em v-if="row.hit.fuzzy" class="sb__fuzzy">模糊</em>
+            <span class="sb__meta sb__meta--stack">
+              <span class="sb__meta-l1">
+                {{ row.hit.song.title }}<em v-if="row.hit.fuzzy" class="sb__fuzzy">模糊</em>
+              </span>
+              <span class="sb__meta-l2">
+                《{{ albumLabel(row.hit.song) }}》<template v-if="row.hit.song.year"
+                  > · {{ row.hit.song.year }}</template
+                >
+              </span>
             </span>
           </template>
         </li>
@@ -325,13 +331,37 @@ onBeforeUnmount(() => window.clearTimeout(timer))
 
 .sb__meta {
   flex: none;
-  max-width: 40%;
+  max-width: 44%;
   font-size: 12px;
   color: var(--text-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: right;
+}
+
+.sb__meta--stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.sb__meta-l1 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb__meta-l2 {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-2);
+  font-size: 11px;
 }
 
 .sb__fuzzy {
