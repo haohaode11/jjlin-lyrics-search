@@ -18,8 +18,10 @@ const rows = ref<Row[]>([])
 const timing = ref('')
 
 let timer: number | undefined
+let searchedQuery = ''
 
 function run() {
+  searchedQuery = q.value
   const t0 = performance.now()
   const songHits = searchSongs(q.value, 3)
   const lineHits = search(q.value)
@@ -53,6 +55,10 @@ function choose(i: number) {
 }
 
 function onKey(e: KeyboardEvent) {
+  if (open.value && ['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key) && searchedQuery !== q.value) {
+    window.clearTimeout(timer)
+    run()
+  }
   if (e.key === 'ArrowDown') {
     if (rows.value.length) {
       e.preventDefault()
@@ -64,16 +70,20 @@ function onKey(e: KeyboardEvent) {
       active.value = (active.value - 1 + rows.value.length) % rows.value.length
     }
   } else if (e.key === 'Enter') {
-    choose(active.value)
+    if (open.value) choose(active.value)
   } else if (e.key === 'Escape') {
+    window.clearTimeout(timer)
     open.value = false
     q.value = ''
     rows.value = []
+    timing.value = ''
+    active.value = -1
   }
 }
 
 /** 供外部（示例标签）直接填入查询词 */
 function setQuery(text: string) {
+  window.clearTimeout(timer)
   q.value = text
   run()
   open.value = true
@@ -94,6 +104,7 @@ onBeforeUnmount(() => window.clearTimeout(timer))
       <input
         v-model="q"
         class="sb__input"
+        aria-label="搜索歌词或歌名"
         type="text"
         autocomplete="off"
         spellcheck="false"

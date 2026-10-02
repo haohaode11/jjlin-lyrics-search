@@ -4,6 +4,7 @@ dist
 data/raw
 data/lyrics.json
 public/lyrics-index.json
+public/data-status.json
 .npm-cache
 *.local
 .DS_Store
