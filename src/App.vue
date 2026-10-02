@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import SearchBox from './components/SearchBox.vue'
 import SongDetail from './components/SongDetail.vue'
+import DataUpdate from './components/DataUpdate.vue'
 import { allSongs, getStats, loadIndex } from './search/engine'
 import { albumLabel } from './search/format'
 import type { SongMeta, SuggestionPick } from './search/types'
@@ -12,22 +13,37 @@ const stats = ref<ReturnType<typeof getStats>>(null)
 const songs = ref<SongMeta[]>([])
 const view = ref<{ idx: number; song: SongMeta; focus: string | null } | null>(null)
 const box = ref<InstanceType<typeof SearchBox> | null>(null)
+const indexVersion = ref(0)
+const detailVersion = ref(0)
 
 const demoQueries = ['爱', '你', '笑', '风', '江南', '曹操', '修炼爱情', 'jiang']
 
-onMounted(async () => {
+async function reloadData(fresh = false) {
   try {
-    await loadIndex()
+    await loadIndex(fresh ? `./lyrics-index.json?t=${Date.now()}` : undefined)
     songs.value = allSongs()
     stats.value = getStats()
     ready.value = true
+    errorMsg.value = ''
+    indexVersion.value++
+    if (view.value) {
+      const idx = songs.value.findIndex(song => song.id === view.value?.song.id)
+      view.value = idx >= 0 ? { idx, song: songs.value[idx], focus: view.value.focus } : null
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     errorMsg.value = msg.includes('HTTP 404')
-      ? '未找到歌词索引文件。请先运行 npm run setup:data 生成歌词数据与索引，再刷新本页。'
-      : `${msg}（数据缺失？请运行 npm run setup:data）`
+      ? '暂无歌词索引，可点击“更新数据”获取歌曲。'
+      : `歌词索引加载失败：${msg}`
   }
-})
+}
+
+onMounted(() => reloadData())
+
+async function scrollToDetail() {
+  await nextTick()
+  document.getElementById('detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 function onPick(p: SuggestionPick) {
   if (p.type === 'song') {
@@ -37,14 +53,16 @@ function onPick(p: SuggestionPick) {
   const hit = p.hit
   const idx = songs.value.findIndex((s) => s.id === hit.song.id)
   if (idx >= 0) {
+    detailVersion.value++
     view.value = { idx, song: songs.value[idx], focus: hit.text }
-    document.getElementById('detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    void scrollToDetail()
   }
 }
 
 function openSong(i: number) {
+  detailVersion.value++
   view.value = { idx: i, song: songs.value[i], focus: null }
-  document.getElementById('detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  void scrollToDetail()
 }
 </script>
 
@@ -58,7 +76,7 @@ function openSong(i: number) {
       </p>
 
       <div class="hero__search">
-        <SearchBox ref="box" @pick="onPick" />
+        <SearchBox :key="indexVersion" ref="box" @pick="onPick" />
       </div>
 
       <div class="hero__demo">
@@ -69,10 +87,11 @@ function openSong(i: number) {
       </div>
 
       <p v-if="!ready && !errorMsg" class="hero__hint">正在加载歌词索引…</p>
-      <p v-if="errorMsg" class="hero__error">{{ errorMsg }}（请先运行 npm run build:index）</p>
+      <p v-if="errorMsg" class="hero__error">{{ errorMsg }}</p>
       <p v-if="ready && stats" class="hero__hint">
         已索引 {{ stats.songs }} 首歌 · {{ stats.lines }} 行歌词
       </p>
+      <DataUpdate @updated="reloadData(true)" />
     </header>
 
     <main class="main">
@@ -106,6 +125,7 @@ function openSong(i: number) {
         </section>
         <SongDetail
           v-else-if="view"
+          :key="`${indexVersion}:${view.song.id}:${detailVersion}`"
           :song="view.song"
           :song-idx="view.idx"
           :focus-text="view.focus"
@@ -115,7 +135,7 @@ function openSong(i: number) {
 
     <footer class="foot">
       <p>
-        歌词版权归原权利人所有，本应用仅用于个人学习 / 演示，请勿公开传播全文 · 数据本地检索，无任何请求离开浏览器
+        歌词版权归原权利人所有，本应用仅用于个人学习 / 演示，请勿公开传播全文 · 搜索在浏览器内完成，更新时由本地服务读取音乐平台数据
       </p>
     </footer>
   </div>

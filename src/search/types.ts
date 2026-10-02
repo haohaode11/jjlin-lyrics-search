@@ -15,6 +15,12 @@ export interface SongMeta {
   arranger?: string
   /** 合唱/合作者（歌手表中除林俊杰之外的人） */
   singerNote?: string
+  /** 平台发行日期 */
+  publishedAt?: string
+  /** 当前歌词所用平台 */
+  lyricSource?: 'qq' | 'netease'
+  /** 可追溯的平台曲目，不参与本地搜索请求 */
+  sources?: { provider: 'qq' | 'netease'; id: string; url: string }[]
   /** @internal 标题拼音（无空格无声调，索引生成），如 江南 -> jiangnan */
   py?: string
 }

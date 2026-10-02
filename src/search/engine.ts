@@ -18,6 +18,8 @@ let lines: LyricsIndexFile['lines'] = []
 /** 音节表，长音节在前，便于贪心切分（jiang > ji > j） */
 let syllables: string[] = []
 let fuse: Fuse<{ lineIdx: number; t: string; p: string }> | null = null
+let requestVersion = 0
+let appliedVersion = 0
 
 export function isLoaded(): boolean {
   return file !== null
@@ -30,14 +32,23 @@ export function getStats() {
 }
 
 export async function loadIndex(url = './lyrics-index.json'): Promise<LyricsIndexFile> {
+  const version = ++requestVersion
   const res = await fetch(url)
   if (!res.ok) throw new Error(`歌词索引加载失败（HTTP ${res.status}）`)
-  file = (await res.json()) as LyricsIndexFile
-  songs = file.songs
-  lines = file.lines
-  syllables = Object.keys(file.pinyinMap).sort((a, b) => b.length - a.length)
-  fuse = new Fuse(
-    lines.map((l, i) => ({ lineIdx: i, t: l.t, p: l.p })),
+  const next = (await res.json()) as LyricsIndexFile
+  const record = (value: unknown) => !!value && typeof value === 'object' && !Array.isArray(value)
+  const invalid = !next || !Array.isArray(next.songs) || !Array.isArray(next.lines)
+    || next.songCount !== next.songs.length || next.lineCount !== next.lines.length
+    || !record(next.charIndex) || !record(next.pinyinMap)
+    || next.songs.some(song => !song || typeof song.id !== 'string' || !song.id || typeof song.title !== 'string')
+    || new Set(next.songs.map(song => song.id)).size !== next.songs.length
+    || next.lines.some(line => !line || !Number.isInteger(line.s) || line.s < 0 || line.s >= next.songs.length || typeof line.t !== 'string' || typeof line.p !== 'string')
+    || Object.entries(next.charIndex).some(([char, indexes]) => !Array.isArray(indexes) || indexes.some((index, i) =>
+      !Number.isInteger(index) || index < 0 || index >= next.lines.length || (i > 0 && index < indexes[i - 1]) || !next.lines[index].t.includes(char)))
+    || Object.values(next.pinyinMap).some(chars => !Array.isArray(chars) || chars.some(char => typeof char !== 'string'))
+  if (invalid) throw new Error('歌词索引格式不正确，请重新更新数据或重建索引')
+  const nextFuse = new Fuse(
+    next.lines.map((l, i) => ({ lineIdx: i, t: l.t, p: l.p })),
     {
       keys: [
         { name: 't', weight: 0.75 },
@@ -52,6 +63,14 @@ export async function loadIndex(url = './lyrics-index.json'): Promise<LyricsInde
       shouldSort: true,
     },
   )
+  // A slower earlier request must not replace a newer successfully loaded index.
+  if (version < appliedVersion) return file!
+  file = next
+  songs = next.songs
+  lines = next.lines
+  syllables = Object.keys(next.pinyinMap).sort((a, b) => b.length - a.length)
+  fuse = nextFuse
+  appliedVersion = version
   return file
 }
 
@@ -118,15 +137,8 @@ function segment(letters: string): string[] | null {
 function charsOfGroup(block: string): string[] {
   if (/^[\u3400-\u9fff]$/.test(block)) return [block]
   const set = new Set<string>()
-  const seg = segment(block)
-  if (seg) {
-    for (const sy of seg) {
-      const cs = file?.pinyinMap[sy] ?? []
-      for (const c of cs) set.add(c)
-    }
-    return [...set]
-  }
-  // 整串切不开 -> 按“前缀”联想（边打字边出结果，如 j -> 就/将/江…）
+  // Multi-syllable queries are already split by search. A single block remains a prefix,
+  // including complete syllables such as jia, which must also match jiang.
   for (const sy of syllables) {
     if (sy.startsWith(block)) {
       const cs = file?.pinyinMap[sy] ?? []
@@ -167,6 +179,7 @@ export function search(rawQuery: string, limit = MAX_SUGGEST): SearchHit[] {
 
   // 2) 每个单元 -> 匹配汉字 -> 命中的行集合（升序去重）
   const groupChars = groups.map(charsOfGroup)
+  const matchedCharacters = [...new Set(groupChars.flat())]
   const groupLines = groupChars.map((cs) => {
     const set = new Set<number>()
     for (const c of cs) for (const li of charLines(c)) set.add(li)
@@ -180,21 +193,22 @@ export function search(rawQuery: string, limit = MAX_SUGGEST): SearchHit[] {
   const pushHit = (lineIdx: number, chars: string[], score: number, fuzzy: boolean) => {
     if (hits.has(lineIdx)) return
     const l = lines[lineIdx]
+    const matched = chars.filter(char => l.t.includes(char))
     hits.set(lineIdx, {
       lineIdx,
       text: l.t,
-      matchedChars: chars,
+      matchedChars: matched,
       song: songs[l.s],
       score,
       fuzzy,
-      hlPositions: hlChars(l.t, chars),
+      hlPositions: hlChars(l.t, matched),
     })
   }
 
   for (const idx of strong) {
     let occ = 0
     for (const cs of groupChars) for (const c of cs) occ += countChar(lines[idx].t, c)
-    pushHit(idx, groups, 1000 + occ, false)
+    pushHit(idx, matchedCharacters, 1000 + occ, false)
   }
 
   // 4) 模糊兜底：无全命中，或查询偏长且命中稀少（错字/记岔歌词时靠它）
@@ -244,7 +258,7 @@ export function search(rawQuery: string, limit = MAX_SUGGEST): SearchHit[] {
     const weak = [...union.entries()].sort((a, b) => b[1] - a[1])
     for (const [idx, occ] of weak) {
       if (hits.size >= limit) break
-      pushHit(idx, groups.length > 1 ? [groups[0]] : groups, 100 + occ, false)
+      pushHit(idx, matchedCharacters, 100 + occ, false)
     }
   }
 

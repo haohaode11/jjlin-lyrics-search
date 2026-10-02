@@ -7,11 +7,12 @@
   "scripts": {
     "dev": "vite",
     "build:index": "node scripts/build-index.mjs",
+    "update:data": "node scripts/update-data.mjs",
     "fetch:lyrics": "node scripts/fetch-lyrics.mjs",
     "fetch:jjqa": "node scripts/download-jjqa.mjs && node scripts/import-jjqa.mjs",
     "fetch:cleaned": "node scripts/fetch-cleaned.mjs",
     "import:all": "node scripts/import-all.mjs",
-    "setup:data": "node scripts/fetch-cleaned.mjs && node scripts/import-all.mjs && npm run build:index",
+    "setup:data": "node scripts/fetch-cleaned.mjs && node scripts/import-all.mjs",
     "build": "npm run build:index && vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run"

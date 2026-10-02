@@ -1,0 +1,18 @@
+{
+  "artist": "林俊杰",
+  "timeoutMs": 12000,
+  "requestDelayMs": 400,
+  "cacheHours": 168,
+  "maxLyricsPerSource": 20,
+  "qq": {
+    "enabled": true,
+    "artistId": "001BLpXF2DyJe2",
+    "catalogLimit": 60
+  },
+  "netease": {
+    "enabled": true,
+    "artistId": "3684",
+    "albumLimit": 8,
+    "catalogLimit": 60
+  }
+}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { linesOfSong } from '../search/engine'
 import { albumLabel } from '../search/format'
 import type { SongMeta } from '../search/types'
@@ -13,6 +13,11 @@ const props = defineProps<{
 }>()
 
 const lineIdx = computed(() => linesOfSong(props.songIdx))
+const lyricContainer = ref<HTMLElement | null>(null)
+watch(() => [props.songIdx, props.focusText], async () => {
+  await nextTick()
+  lyricContainer.value?.querySelector('.detail__line--focus')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+}, { immediate: true })
 </script>
 
 <template>
@@ -26,13 +31,19 @@ const lineIdx = computed(() => linesOfSong(props.songIdx))
         </p>
         <p v-if="song.lyricist || song.composer || song.arranger" class="detail__credits">
           <template v-if="song.lyricist"><b>词</b> {{ song.lyricist }}</template>
-          <template v-if="song.composer"><i>·</i><b>曲</b> {{ song.composer }}</template>
-          <template v-if="song.arranger"><i>·</i><b>编曲</b> {{ song.arranger }}</template>
+          <template v-if="song.composer"><i v-if="song.lyricist">·</i><b>曲</b> {{ song.composer }}</template>
+          <template v-if="song.arranger"><i v-if="song.lyricist || song.composer">·</i><b>编曲</b> {{ song.arranger }}</template>
+        </p>
+        <p v-if="song.sources?.length" class="detail__sources">
+          平台曲目：
+          <a v-for="source in song.sources" :key="`${source.provider}:${source.id}`" :href="source.url" target="_blank" rel="noopener noreferrer">
+            {{ source.provider === 'qq' ? 'QQ 音乐' : '网易云音乐' }}
+          </a>
         </p>
       </div>
       <span class="detail__badge">歌词查看</span>
     </header>
-    <div class="detail__lines">
+    <div ref="lyricContainer" class="detail__lines">
       <p
         v-for="(ln, i) in lineIdx"
         :key="i"
@@ -93,6 +104,9 @@ const lineIdx = computed(() => linesOfSong(props.songIdx))
   color: var(--text-2);
 }
 
+.detail__sources { margin: 9px 0 0; color: var(--text-2); font-size: 11px; }
+.detail__sources a { color: var(--accent); margin-right: 12px; text-underline-offset: 3px; }
+
 .detail__badge {
   flex: none;
   font-size: 12px;
@@ -106,8 +120,6 @@ const lineIdx = computed(() => linesOfSong(props.songIdx))
   padding: 20px 24px 28px;
   max-height: 420px;
   overflow-y: auto;
-  columns: 2;
-  column-gap: 48px;
   line-height: 1.1;
 }
 
@@ -131,9 +143,4 @@ const lineIdx = computed(() => linesOfSong(props.songIdx))
   color: var(--text-2);
 }
 
-@media (max-width: 640px) {
-  .detail__lines {
-    columns: 1;
-  }
-}
 </style>

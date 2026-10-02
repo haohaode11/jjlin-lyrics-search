@@ -3,15 +3,15 @@
  * 运行：npm test
  */
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { loadIndex, search, searchSongs } from './engine'
+import { allSongs, loadIndex, search, searchSongs } from './engine'
 import type { LyricsIndexFile } from './types'
 
 /** 与 build-index.mjs 输出同构的最小语料（江南 + 一首含“爱”的歌） */
 function fixture(): LyricsIndexFile {
   return {
     generatedAt: 'test',
-    songCount: 2,
-    lineCount: 5,
+    songCount: 3,
+    lineCount: 6,
     songs: [
       { id: 'jiangnan', title: '江南', album: '第二天堂', year: 2004, py: 'jiangnan', lyricist: '李瑞洵', composer: '林俊杰' },
       { id: 'xiao', title: '小酒窝', album: 'JJ陆', year: 2008, py: 'xiaojiuwo', lyricist: '王雅君', composer: '林俊杰' },
@@ -23,6 +23,7 @@ function fixture(): LyricsIndexFile {
       { s: 0, t: '鱼戏莲叶间', p: 'yu xi lian ye jian' },
       { s: 1, t: '你爱笑的眼睛', p: 'ni ai xiao de yan jing' },
       { s: 1, t: '风到这里就是粘', p: 'feng dao zhe li jiu shi zhan' },
+      { s: 1, t: '回家测试', p: 'hui jia ce shi' },
     ],
     charIndex: {
       江: [0],
@@ -49,9 +50,14 @@ function fixture(): LyricsIndexFile {
       就: [4],
       是: [4],
       粘: [4],
+      回: [5],
+      家: [5],
+      测: [5],
+      试: [5],
     },
     pinyinMap: {
       jiang: ['江'],
+      jia: ['家'],
       nan: ['南'],
       lian: ['莲'],
       ye: ['叶'],
@@ -120,6 +126,11 @@ describe('拼音检索', () => {
     const r = search('jia')
     expect(r.some((h) => h.text === '江南可采莲')).toBe(true)
   })
+  it('拼音命中的高亮位置对应实际汉字', () => {
+    const hit = search('jiang').find(h => h.text === '江南可采莲')
+    expect(hit?.matchedChars).toContain('江')
+    expect(hit?.hlPositions).toContain(0)
+  })
 })
 
 describe('歌名检索（含词曲人）', () => {
@@ -162,5 +173,24 @@ describe('边界', () => {
     expect(() => search('根本没有的字龘')).not.toThrow()
     const r = search('根本没有的字龘')
     expect(Array.isArray(r)).toBe(true)
+  })
+  it('损坏的索引不会破坏已经加载的搜索数据', async () => {
+    const previous = allSongs()
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ ...fixture(), lines: [{ s: 999, t: '损坏', p: '' }] }) })))
+    await expect(loadIndex('broken')).rejects.toThrow('格式不正确')
+    expect(allSongs()).toBe(previous)
+    expect(search('江南')[0].text).toBe('江南可采莲')
+  })
+  it('较慢的旧请求不会覆盖已加载的新索引', async () => {
+    let finish: (value: unknown) => void = () => {}
+    const older = new Promise(resolve => { finish = resolve })
+    const newer = fixture()
+    newer.songs[0].title = '新版江南'
+    vi.stubGlobal('fetch', vi.fn().mockReturnValueOnce(older).mockResolvedValueOnce({ ok: true, json: async () => newer }))
+    const first = loadIndex('older')
+    await loadIndex('newer')
+    finish({ ok: true, json: async () => fixture() })
+    await first
+    expect(allSongs()[0].title).toBe('新版江南')
   })
 })
